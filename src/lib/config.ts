@@ -34,7 +34,7 @@ export const DEFAULT_CONFIG: LiteLLMConfig = {
   apiKey: "",
   endpoint: "",
   user: "",
-  guardrails: [],
+  guardrails: ["chayakorn-input-guardrail", "chayakorn-output-guardrail"],
   piiDetection: false,
   guardrailModel: false,
 };

@@ -22,7 +22,7 @@ export default function ConfigPage() {
   const [form, setForm] = useState<LiteLLMConfig>(DEFAULT_CONFIG);
   const [saved, setSaved] = useState(false);
   const [showKey, setShowKey] = useState(false);
-  const [guardrailsRaw, setGuardrailsRaw] = useState("");
+  const [guardrailInput, setGuardrailInput] = useState("");
 
   // Model list state
   const [models, setModels] = useState<string[]>([]);
@@ -34,10 +34,7 @@ export default function ConfigPage() {
 
   useEffect(() => {
     const cfg = getConfig();
-    if (cfg) {
-      setForm({ ...DEFAULT_CONFIG, ...cfg });
-      setGuardrailsRaw((cfg.guardrails ?? []).join(", "));
-    }
+    setForm(cfg ? { ...DEFAULT_CONFIG, ...cfg } : { ...DEFAULT_CONFIG });
   }, []);
 
   // Close dropdown when clicking outside
@@ -62,12 +59,18 @@ export default function ConfigPage() {
     }
   };
 
-  // แปลง guardrails string เป็น array (comma-separated)
-  const parseGuardrails = (raw: string): string[] =>
-    raw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+  const addGuardrail = () => {
+    const name = guardrailInput.trim();
+    if (!name) return;
+    const current = form.guardrails ?? [];
+    if (current.includes(name)) return;
+    handleChange("guardrails", [...current, name]);
+    setGuardrailInput("");
+  };
+
+  const removeGuardrail = (name: string) => {
+    handleChange("guardrails", (form.guardrails ?? []).filter((g) => g !== name));
+  };
 
   const canFetch = form.apiKey.trim() && form.endpoint.trim();
 
@@ -126,8 +129,8 @@ export default function ConfigPage() {
 
   const handleClear = () => {
     clearConfig();
-    setForm(DEFAULT_CONFIG);
-    setGuardrailsRaw("");
+    setForm({ ...DEFAULT_CONFIG });
+    setGuardrailInput("");
     setModels([]);
     setModelError(null);
     setSaved(false);
@@ -335,32 +338,54 @@ export default function ConfigPage() {
               </div>
 
               {/* Step 5 — Guardrails */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
                   <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs font-bold mr-1.5">5</span>
                   Guardrails
-                  <span className="ml-1 text-xs text-gray-400 font-normal">(คั่นด้วย comma)</span>
                 </label>
-                <input
-                  type="text"
-                  value={guardrailsRaw}
-                  onChange={(e) => setGuardrailsRaw(e.target.value)}
-                  onBlur={(e) => handleChange("guardrails", parseGuardrails(e.target.value))}
-                  placeholder="เช่น chayakorn-output-guardrail, chayakorn-input-guardrail"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                />
-                {parseGuardrails(guardrailsRaw).length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {parseGuardrails(guardrailsRaw).map((g) => (
-                      <span
-                        key={g}
-                        className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-700"
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-1.5 min-h-[2rem]">
+                  {(form.guardrails ?? []).length === 0 && (
+                    <p className="text-xs text-gray-400 self-center">ยังไม่มี guardrail</p>
+                  )}
+                  {(form.guardrails ?? []).map((g) => (
+                    <span
+                      key={g}
+                      className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-700"
+                    >
+                      {g}
+                      <button
+                        type="button"
+                        onClick={() => removeGuardrail(g)}
+                        className="flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-blue-200 text-blue-500 hover:text-blue-700 transition-colors"
+                        aria-label={`ลบ ${g}`}
                       >
-                        {g}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                {/* Add new guardrail */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={guardrailInput}
+                    onChange={(e) => setGuardrailInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addGuardrail())}
+                    placeholder="ชื่อ guardrail เช่น my-guardrail"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={addGuardrail}
+                    disabled={!guardrailInput.trim()}
+                    className="px-3 py-2 bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed text-sm rounded-lg transition-colors font-medium"
+                  >
+                    + เพิ่ม
+                  </button>
+                </div>
               </div>
 
               {/* Step 6 — Metadata toggles */}

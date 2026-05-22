@@ -109,7 +109,7 @@ export default function ChatPage() {
         const decoder = new TextDecoder();
         let buffer = "";
 
-        while (true) {
+        outer: while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
@@ -120,7 +120,7 @@ export default function ChatPage() {
           for (const line of lines) {
             if (!line.startsWith("data: ")) continue;
             const data = line.slice(6).trim();
-            if (data === "[DONE]") break;
+            if (data === "[DONE]") break outer;
             try {
               const json = JSON.parse(data);
               const delta = json.choices?.[0]?.delta?.content ?? "";
