@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, model, apiKey, endpoint, user, guardrails, metadata } = await req.json();
+    const { messages, model, apiKey, endpoint, user, guardrails, metadata, streaming } = await req.json();
 
     if (!model || !apiKey || !endpoint) {
       return NextResponse.json(
@@ -14,8 +14,11 @@ export async function POST(req: NextRequest) {
     const baseUrl = endpoint.endsWith("/") ? endpoint.slice(0, -1) : endpoint;
     const url = `${baseUrl}/chat/completions`;
 
+    // ใช้ streaming mode ตามที่ client กำหนด (default: true)
+    const useStream = streaming !== false;
+
     // Build request body — include optional guardrail fields only when present
-    const bodyPayload: Record<string, unknown> = { model, messages, stream: true };
+    const bodyPayload: Record<string, unknown> = { model, messages, stream: useStream };
     if (user) bodyPayload.user = user;
     if (guardrails && guardrails.length > 0) bodyPayload.guardrails = guardrails;
     if (metadata && Object.keys(metadata).length > 0) bodyPayload.metadata = metadata;
@@ -37,7 +40,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Stream the response back to the client
+    if (!useStream) {
+      // Non-streaming: ส่ง JSON กลับตรง ๆ
+      const data = await response.json();
+      return NextResponse.json(data);
+    }
+
+    // Streaming: pipe SSE กลับไปที่ client
     return new NextResponse(response.body, {
       headers: {
         "Content-Type": "text/event-stream",

@@ -6,6 +6,7 @@ export interface LiteLLMConfig {
   guardrails?: string[];    // ชื่อ guardrail ที่ต้องการเปิด
   piiDetection?: boolean;   // เปิด pii_detection
   guardrailModel?: boolean; // เปิด guardrail_model
+  streaming?: boolean;      // เปิด/ปิด streaming mode
 }
 
 const CONFIG_KEY = "litellm_config";
@@ -37,6 +38,7 @@ export const DEFAULT_CONFIG: LiteLLMConfig = {
   guardrails: ["chayakorn-input-guardrail", "chayakorn-output-guardrail"],
   piiDetection: false,
   guardrailModel: false,
+  streaming: true,
 };
 
 export function isConfigured(config: LiteLLMConfig | null): boolean {
