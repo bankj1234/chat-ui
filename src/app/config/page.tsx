@@ -121,6 +121,7 @@ export default function ConfigPage() {
       guardrails: form.guardrails ?? [],
       piiDetection: form.piiDetection ?? false,
       guardrailModel: form.guardrailModel ?? false,
+      streaming: form.streaming ?? true,
     };
     saveConfig(trimmed);
     setSaved(true);
@@ -388,10 +389,57 @@ export default function ConfigPage() {
                 </div>
               </div>
 
-              {/* Step 6 — Metadata toggles */}
+              {/* Step 6 — Streaming mode */}
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
                   <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs font-bold mr-1.5">6</span>
+                  Streaming Mode
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer select-none pl-1">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={form.streaming ?? true}
+                      onChange={(e) => handleChange("streaming", e.target.checked)}
+                    />
+                    <div
+                      className={`w-10 h-5 rounded-full transition-colors ${
+                        (form.streaming ?? true) ? "bg-blue-500" : "bg-gray-200"
+                      }`}
+                    />
+                    <div
+                      className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                        (form.streaming ?? true) ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-700 font-medium">
+                      Streaming{" "}
+                      <span
+                        className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
+                          (form.streaming ?? true)
+                            ? "bg-blue-100 text-blue-600"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {(form.streaming ?? true) ? "เปิด" : "ปิด"}
+                      </span>
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {(form.streaming ?? true)
+                        ? "แสดงข้อความทีละตัวอักษรแบบ real-time (stream: true)"
+                        : "รอรับข้อความทั้งหมดก่อนแสดงผล (stream: false)"}
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Step 7 — Metadata toggles */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs font-bold mr-1.5">7</span>
                   Metadata Options
                 </label>
                 <div className="flex flex-col gap-3 pl-1">

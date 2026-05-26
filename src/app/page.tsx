@@ -74,6 +74,8 @@ export default function ChatPage() {
         if (cfg!.piiDetection) metadata.pii_detection = 1;
         if (cfg!.guardrailModel) metadata.guardrail_model = 1;
 
+        const useStream = cfg!.streaming !== false; // default: true
+
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -82,6 +84,7 @@ export default function ChatPage() {
             model: cfg!.model,
             apiKey: cfg!.apiKey,
             endpoint: cfg!.endpoint,
+            streaming: useStream,
             ...(cfg!.user ? { user: cfg!.user } : {}),
             ...(cfg!.guardrails && cfg!.guardrails.length > 0 ? { guardrails: cfg!.guardrails } : {}),
             metadata,
@@ -93,48 +96,63 @@ export default function ChatPage() {
           throw new Error(data.error || "Request failed");
         }
 
-        // Handle SSE streaming
-        const assistantId = uuidv4();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: assistantId,
-            role: "assistant",
-            content: "",
-            timestamp: new Date(),
-          },
-        ]);
+        if (!useStream) {
+          // Non-streaming: รับ JSON ตรง ๆ แล้วแสดงผลทันที
+          const data = await res.json();
+          const content = data.choices?.[0]?.message?.content ?? "";
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: uuidv4(),
+              role: "assistant",
+              content,
+              timestamp: new Date(),
+            },
+          ]);
+        } else {
+          // Streaming: อ่าน SSE ทีละ chunk
+          const assistantId = uuidv4();
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: assistantId,
+              role: "assistant",
+              content: "",
+              timestamp: new Date(),
+            },
+          ]);
 
-        const reader = res.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+          const reader = res.body!.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
 
-        outer: while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+          outer: while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
 
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const data = line.slice(6).trim();
-            if (data === "[DONE]") break outer;
-            try {
-              const json = JSON.parse(data);
-              const delta = json.choices?.[0]?.delta?.content ?? "";
-              if (delta) {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantId
-                      ? { ...m, content: m.content + delta }
-                      : m
-                  )
-                );
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const data = line.slice(6).trim();
+              if (data === "[DONE]") break outer;
+              try {
+                const json = JSON.parse(data);
+                const delta = json.choices?.[0]?.delta?.content ?? "";
+                if (delta) {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantId
+                        ? { ...m, content: m.content + delta }
+                        : m
+                    )
+                  );
+                }
+              } catch {
+                // skip malformed chunks
               }
-            } catch {
-              // skip malformed chunks
             }
           }
         }
